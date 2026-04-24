@@ -1,6 +1,11 @@
 """
 Tuliprox Mapper - FastAPI backend
 Helps users visually create mapping files for tuliprox.
+
+Session storage note: sessions are held in-memory for the lifetime of the
+server process. Each parse call creates a new session entry; there is no
+automatic expiry. Restart the server to reclaim memory. This tool is intended
+for short-lived, single-user local use, not long-running deployments.
 """
 
 import io
@@ -116,6 +121,11 @@ def _parse_m3u_content(content: str, vod_keywords: list[str] | None = None) -> d
 # Generator
 # ---------------------------------------------------------------------------
 
+def _escape_filter_value(name: str) -> str:
+    """Escape double-quotes so channel/group names are safe inside filter expressions."""
+    return name.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _sanitize_name(name: str) -> str:
     return re.sub(r"[^a-z0-9_]", "_", name.lower()).strip("_")
 
@@ -124,9 +134,11 @@ def _generate_mapping_yml(mapping_id: str, groups: list[dict]) -> str:
     entries = []
     for group in groups:
         for ch in group.get("channels", []):
+            safe_ch = _escape_filter_value(ch["name"])
+            safe_grp = _escape_filter_value(group["name"])
             entries.append({
-                "filter": f'Name ~ "{ch["name"]}"',
-                "script": f'@Group = "{group["name"]}"\n',
+                "filter": f'Name ~ "{safe_ch}"',
+                "script": f'@Group = "{safe_grp}"\n',
             })
 
     mapping_doc = {
@@ -149,7 +161,7 @@ def _generate_template_yml(groups: list[dict]) -> str:
         if not channels:
             continue
         template_name = _sanitize_name(group["name"]) + "_channels"
-        parts = [f'Name ~ "{ch["name"]}"' for ch in channels]
+        parts = [f'Name ~ "{_escape_filter_value(ch["name"])}"' for ch in channels]
         value = "(" + " OR ".join(parts) + ")"
         templates.append({"name": template_name, "value": value})
 
@@ -162,7 +174,7 @@ def _generate_filter_snippet(groups: list[dict]) -> str:
     for group in groups:
         all_channels.extend(ch["name"] for ch in group.get("channels", []))
 
-    parts = [f'(Name ~ "{name}")' for name in all_channels]
+    parts = [f'(Name ~ "{_escape_filter_value(name)}")' for name in all_channels]
     filter_expr = " OR ".join(parts)
 
     lines = [
@@ -188,6 +200,7 @@ async def parse_playlist(
     vod_keywords: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
 ):
+    # Split on literal comma — no regex to avoid ReDoS on untrusted input
     extra_kw = [k.strip() for k in vod_keywords.split(",")] if vod_keywords else []
 
     content = ""
@@ -195,6 +208,11 @@ async def parse_playlist(
         raw = await file.read()
         content = raw.decode("utf-8", errors="replace")
     elif url:
+        # Restrict to HTTP/HTTPS only to prevent SSRF via file:// or other schemes
+        from urllib.parse import urlparse as _urlparse
+        parsed_url = _urlparse(url)
+        if parsed_url.scheme not in ("http", "https"):
+            raise HTTPException(status_code=400, detail="Only http:// and https:// URLs are supported.")
         try:
             resp = requests.get(
                 url,

@@ -773,7 +773,7 @@ async function copyFile(filename) {
     await navigator.clipboard.writeText(content);
     showToast(`Copied ${filename} to clipboard!`);
   } catch {
-    // Fallback
+    // Fallback for older browsers — execCommand is deprecated but kept for compatibility
     const ta = document.createElement("textarea");
     ta.value = content;
     document.body.appendChild(ta);
