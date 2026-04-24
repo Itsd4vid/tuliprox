@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tuliprox Mapper</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-icon">🗺️</span>
+          <span class="logo-text">Tuliprox <strong>Mapper</strong></span>
+        </div>
+        <p class="tagline">Visually create mapping files for your tuliprox config</p>
+      </div>
+    </header>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator" id="stepIndicator">
+      <div class="steps-track">
+        <div class="step-item active" data-step="1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Import</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" data-step="2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Channels</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" data-step="3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Organize</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" data-step="4">
+          <div class="step-circle">✓</div>
+          <div class="step-label">Export</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div id="stepContent"></div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
