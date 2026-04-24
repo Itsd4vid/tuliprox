@@ -13,6 +13,7 @@ import re
 import uuid
 import zipfile
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 import yaml
@@ -77,7 +78,7 @@ def _parse_m3u_content(content: str, vod_keywords: list[str] | None = None) -> d
             if group_match:
                 group_title = group_match.group(1)
 
-            name_match = re.search(r",(.+)$", line)
+            name_match = re.search(r",([^\r\n]+)$", line)
             if name_match:
                 channel_name = name_match.group(1).strip()
 
@@ -209,8 +210,7 @@ async def parse_playlist(
         content = raw.decode("utf-8", errors="replace")
     elif url:
         # Restrict to HTTP/HTTPS only to prevent SSRF via file:// or other schemes
-        from urllib.parse import urlparse as _urlparse
-        parsed_url = _urlparse(url)
+        parsed_url = urlparse(url)
         if parsed_url.scheme not in ("http", "https"):
             raise HTTPException(status_code=400, detail="Only http:// and https:// URLs are supported.")
         try:

@@ -773,14 +773,22 @@ async function copyFile(filename) {
     await navigator.clipboard.writeText(content);
     showToast(`Copied ${filename} to clipboard!`);
   } catch {
-    // Fallback for older browsers — execCommand is deprecated but kept for compatibility
-    const ta = document.createElement("textarea");
-    ta.value = content;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    showToast(`Copied ${filename} to clipboard!`);
+    // Fallback for older browsers — execCommand is deprecated; may not work in all modern browsers
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = content;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) {
+        showToast(`Copied ${filename} to clipboard!`);
+      } else {
+        showToast(`⚠️ Copy failed — please select the text above and copy manually.`, "error");
+      }
+    } catch {
+      showToast(`⚠️ Copy not supported in this browser — please select the text above and copy manually.`, "error");
+    }
   }
 }
 
