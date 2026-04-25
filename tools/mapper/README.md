@@ -87,7 +87,7 @@ targets:
 Contains named filter templates — one per output group — that you can reuse in `source.yml` filters:
 
 ```yaml
-filter: '{{portugal_channels}}'
+filter: '!portugal_channels!'
 ```
 
 ### `filter_snippet.txt`

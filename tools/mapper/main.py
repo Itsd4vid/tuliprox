@@ -12,6 +12,7 @@ import io
 import re
 import uuid
 import zipfile
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -134,13 +135,14 @@ def _sanitize_name(name: str) -> str:
 def _generate_mapping_yml(mapping_id: str, groups: list[dict]) -> str:
     entries = []
     for group in groups:
-        for ch in group.get("channels", []):
-            safe_ch = _escape_filter_value(ch["name"])
-            safe_grp = _escape_filter_value(group["name"])
-            entries.append({
-                "filter": f'Name ~ "{safe_ch}"',
-                "script": f'@Group = "{safe_grp}"\n',
-            })
+        if not group.get("channels"):
+            continue
+        template_name = _sanitize_name(group["name"]) + "_channels"
+        safe_grp = _escape_filter_value(group["name"])
+        entries.append({
+            "filter": f"!{template_name}!",
+            "script": f'@Group = "{safe_grp}"\n',
+        })
 
     mapping_doc = {
         "mappings": {
@@ -166,7 +168,7 @@ def _generate_template_yml(groups: list[dict]) -> str:
         value = "(" + " OR ".join(parts) + ")"
         templates.append({"name": template_name, "value": value})
 
-    template_doc = {"mappings": {"templates": templates}}
+    template_doc = {"templates": templates}
     return yaml.dump(template_doc, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
@@ -189,9 +191,12 @@ def _generate_filter_snippet(groups: list[dict]) -> str:
 # Routes
 # ---------------------------------------------------------------------------
 
+_STATIC_DIR = Path(__file__).parent / "static"
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    with open(_STATIC_DIR / "index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
 
@@ -311,4 +316,4 @@ async def download_zip(
     )
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
